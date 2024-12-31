@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Client, Pool } from "pg";
 
@@ -12,10 +11,8 @@ function stripDatabaseName(url: string) {
   };
 }
 
-async function createDatabaseIfNotExistsAsync() {
-  const { rootConnectionString, databaseName } = stripDatabaseName(
-    process.env.POSTGRES_URL as string
-  );
+export async function createDatabaseIfNotExistsAsync(url: string) {
+  const { rootConnectionString, databaseName } = stripDatabaseName(url);
 
   const client = new Client({
     connectionString: rootConnectionString,
@@ -40,13 +37,9 @@ async function createDatabaseIfNotExistsAsync() {
   }
 }
 
-export async function createDrizzleAsync() {
-  if (process.env.NODE_ENV === "development") {
-    await createDatabaseIfNotExistsAsync();
-  }
-
+export async function createDrizzleAsync(url: string) {
   const pool = new Pool({
-    connectionString: process.env.POSTGRES_URL,
+    connectionString: url,
   });
 
   return drizzle(pool, {
