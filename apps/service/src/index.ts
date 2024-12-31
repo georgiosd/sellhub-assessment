@@ -2,7 +2,7 @@ import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
 
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { seed } from "drizzle-seed";
+import { reset, seed } from "drizzle-seed";
 import {
   createDatabaseIfNotExistsAsync,
   createDrizzleAsync,
@@ -33,7 +33,15 @@ app.listen(port, async () => {
   });
 
   if (isDevEnv) {
-    await seed(drizzle, schema);
+    await reset(drizzle, schema);
+
+    await seed(drizzle, schema).refine((f) => ({
+      products: {
+        columns: {
+          inventory_count: f.int({ minValue: 0 }),
+        },
+      },
+    }));
   }
 
   console.log(`[server]: Server is running at http://localhost:${port}`);
