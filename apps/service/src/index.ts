@@ -2,11 +2,12 @@ import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
 
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { seed } from "drizzle-seed";
 import {
   createDatabaseIfNotExistsAsync,
   createDrizzleAsync,
 } from "./drizzle/db";
-import { create } from "domain";
+import schema from "./drizzle/schema";
 
 dotenv.config();
 
@@ -19,8 +20,9 @@ app.get("/", (req: Request, res: Response) => {
 
 app.listen(port, async () => {
   const connectionString = process.env.POSTGRES_URL as string;
+  const isDevEnv = process.env.NODE_ENV === "development";
 
-  if (process.env.NODE_ENV === "development") {
+  if (isDevEnv) {
     await createDatabaseIfNotExistsAsync(connectionString);
   }
 
@@ -29,6 +31,10 @@ app.listen(port, async () => {
   await migrate(drizzle, {
     migrationsFolder: "./src/drizzle/migrations",
   });
+
+  if (isDevEnv) {
+    await seed(drizzle, schema);
+  }
 
   console.log(`[server]: Server is running at http://localhost:${port}`);
 });
