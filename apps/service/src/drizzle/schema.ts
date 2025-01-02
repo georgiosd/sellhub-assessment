@@ -15,5 +15,3 @@ export const InsertProductSchema = createInsertSchema(products, {
 
 export type TProduct = zod.infer<typeof ProductSchema>;
 export type TInsertProduct = zod.infer<typeof InsertProductSchema>;
-
-export default { products };

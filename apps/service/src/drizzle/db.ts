@@ -1,7 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Client, Pool } from "pg";
-
-import schema from "./schema";
+import * as schema from "./schema";
 
 function stripDatabaseName(url: string) {
   const urlParts = url.split("/");
@@ -35,15 +34,13 @@ export async function createDatabaseIfNotExistsAsync(url: string) {
   }
 }
 
-export async function createDrizzleAsync(url: string) {
+export function createDrizzle(url: string) {
   const pool = new Pool({
     connectionString: url,
   });
 
   return {
-    db: drizzle(pool, {
-      schema,
-    }),
+    db: drizzle({ client: pool, schema }),
     pool,
   };
 }
