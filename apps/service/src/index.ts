@@ -11,16 +11,22 @@ import schema from "./drizzle/schema";
 
 dotenv.config();
 
-const app: Express = express();
-const port = process.env.PORT || 3000;
+function addRoutes(app: Express) {
+  app.get("/", (req: Request, res: Response) => {
+    res.send("Express + TypeScript Server");
+  });
 
-app.get("/", (req: Request, res: Response) => {
-  res.send("Express + TypeScript Server");
-});
+  return app;
+}
 
-app.listen(port, async () => {
-  const connectionString = process.env.POSTGRES_URL as string;
-  const isDevEnv = process.env.NODE_ENV === "development";
+async function createExpressApp({
+  connectionString,
+  isDevEnv,
+}: {
+  connectionString: string;
+  isDevEnv: boolean;
+}) {
+  const app: Express = addRoutes(express());
 
   if (isDevEnv) {
     await createDatabaseIfNotExistsAsync(connectionString);
@@ -44,5 +50,20 @@ app.listen(port, async () => {
     }));
   }
 
-  console.log(`[server]: Server is running at http://localhost:${port}`);
-});
+  return app;
+}
+
+async function main() {
+  const app = await createExpressApp({
+    connectionString: process.env.POSTGRES_URL as string,
+    isDevEnv: process.env.NODE_ENV === "development",
+  });
+
+  const port = process.env.PORT || 3000;
+
+  app.listen(port, () => {
+    console.log(`[server]: Server is running at http://localhost:${port}`);
+  });
+}
+
+main();
