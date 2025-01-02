@@ -41,23 +41,31 @@ afterAll(async () => {
 
 describe("app", () => {
   describe("products", () => {
-    it("should return 10 products", async () => {
-      const response = await request(app).get("/products");
+    describe("list", () => {
+      it("should return 10 products", async () => {
+        const response = await request(app).get("/products");
 
-      expect(response.status).toBe(200);
-      expect(response.body).toBeInstanceOf(Array);
-      expect(response.body as TProduct[]).toHaveLength(10);
+        expect(response.status).toBe(200);
+        expect(response.body).toBeInstanceOf(Array);
+        expect(response.body as TProduct[]).toHaveLength(10);
+      });
     });
 
-    it("should return a single product", async () => {
-      const response = await request(app).get(
-        "/products/00000000-0000-0000-0000-000000000001"
-      );
+    describe("details", () => {
+      it("should return a single product", async () => {
+        const response = await request(app).get(
+          "/products/00000000-0000-0000-0000-000000000001"
+        );
 
-      expect(response.status).toBe(200);
-      expect(response.body).toBeInstanceOf(Object);
-      expect(response.body as TProduct).toMatchObject({
-        id: "00000000-0000-0000-0000-000000000001",
+        expect(response.status).toBe(200);
+        expect(response.body).toBeInstanceOf(Object);
+        expect(response.body as TProduct).toMatchObject({
+          id: "00000000-0000-0000-0000-000000000001",
+        });
+      });
+    });
+
+
       });
     });
   });
