@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import cors from "cors";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { reset, seed } from "drizzle-seed";
 import express, { Express, NextFunction, Request, Response } from "express";
@@ -177,6 +178,7 @@ export async function createExpressApp({
 
   const app = express();
 
+  app.use(cors());
   app.use(express.json());
 
   return {
