@@ -7,10 +7,20 @@ import * as schema from "./drizzle/schema";
 
 type TDatabase = ReturnType<typeof createDrizzle>["db"];
 
+function sanitizePagingParameter(skip: any) {
+  const parsed = parseInt(skip, 10);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
 function addRoutes(app: Express, db: TDatabase) {
   app.get("/products", async (req: Request, res: Response) => {
-    const products = await db.select().from(schema.products).limit(10);
-    res.json(products);
+    const products = await db
+      .select()
+      .from(schema.products)
+      .offset(sanitizePagingParameter(req.query.skip))
+      .limit(10);
+
+      res.json(products);
   });
 
   return app;
