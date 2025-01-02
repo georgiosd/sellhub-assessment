@@ -15,30 +15,35 @@ function sanitizePagingParameter(skip: any) {
   return isNaN(parsed) ? 0 : parsed;
 }
 
+type IdentifiedProductRequestParams = { id: string };
+
 function addRoutes(app: Express, db: TDatabase) {
   app.get("/products", async (req: Request, res: Response) => {
-    const products = await db
+    const match = await db
       .select()
-      .from(schema.products)
+      .from(products)
       .offset(sanitizePagingParameter(req.query.skip))
       .limit(10);
 
-    res.json(products);
+    res.json(match);
   });
 
-  app.get("/products/:id", async (req: Request, res: Response) => {
-    const product = await db
-      .select()
-      .from(schema.products)
-      .where(eq(products.id, req.params.id));
+  app.get(
+    "/products/:id",
+    async (req: Request<IdentifiedProductRequestParams>, res: Response) => {
+      const match = await db
+        .select()
+        .from(products)
+        .where(eq(products.id, req.params.id));
 
-    if (!product.length) {
-      res.status(404);
-      return;
+      if (!match.length) {
+        res.status(404);
+        return;
+      }
+
+      res.json(match[0]);
     }
-
-    res.json(product[0]);
-  });
+  );
 
   return app;
 }
@@ -61,6 +66,7 @@ export async function createExpressApp({
   });
 
   if (isDevEnv) {
+    // this step would be refactored out normally
     await reset(db, schema);
 
     await seed(db, schema).refine((f) => ({
