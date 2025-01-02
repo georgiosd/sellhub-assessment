@@ -1,10 +1,11 @@
-import express, { Express, Request, Response } from "express";
-
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { reset, seed } from "drizzle-seed";
+import express, { Express, NextFunction, Request, Response } from "express";
+import z, { ZodError } from "zod";
 import { createDatabaseIfNotExistsAsync, createDrizzle } from "./drizzle/db";
 import * as schema from "./drizzle/schema";
+import { type TPurchaseProduct } from "./drizzle/schema";
 
 const { products } = schema;
 
@@ -13,6 +14,25 @@ type TDatabase = ReturnType<typeof createDrizzle>["db"];
 function sanitizePagingParameter(skip: any) {
   const parsed = parseInt(skip, 10);
   return isNaN(parsed) ? 0 : parsed;
+}
+
+function validateData(schema: z.ZodObject<any, any>) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    try {
+      schema.parse(req.body);
+      next();
+    } catch (error) {
+      if (error instanceof ZodError) {
+        res.status(400).json({
+          error: "validation_error",
+          details: error.errors,
+        });
+        return;
+      }
+
+      next(error);
+    }
+  };
 }
 
 type IdentifiedProductRequestParams = { id: string };
@@ -42,6 +62,63 @@ function addRoutes(app: Express, db: TDatabase) {
       }
 
       res.json(match[0]);
+    }
+  );
+
+  app.post(
+    "/products/:id/purchase",
+    validateData(schema.PurchaseProductSchema),
+    async (
+      req: Request<IdentifiedProductRequestParams, any, TPurchaseProduct>,
+      res: Response
+    ) => {
+      const match = await db
+        .select()
+        .from(products)
+        .where(eq(products.id, req.params.id));
+
+      if (!match.length) {
+        res.status(404);
+        return;
+      }
+
+      if (match[0].inventory_count === 0) {
+        res.status(400).json({
+          error: "out_of_stock",
+        });
+        return;
+      }
+
+      const newCount = await db.transaction(async (tx) => {
+        const result = await tx
+          .update(schema.products)
+          .set({
+            inventory_count:
+              match[0].inventory_count - req.body.inventory_count,
+          })
+          .where(eq(products.id, req.params.id))
+          .returning({ inventory_count: products.inventory_count });
+
+        if (result[0].inventory_count < 0) {
+          try {
+            tx.rollback();
+          } catch {}
+          return -1;
+        }
+
+        return result[0].inventory_count;
+      });
+
+      if (newCount === -1) {
+        res.status(400).json({
+          error: "out_of_stock",
+        });
+        return;
+      }
+
+      res.status(200).json({
+        inventory_count: newCount,
+      });
     }
   );
 
@@ -98,8 +175,12 @@ export async function createExpressApp({
     }));
   }
 
+  const app = express();
+
+  app.use(express.json());
+
   return {
-    app: addRoutes(express(), db),
+    app: addRoutes(app, db),
     db,
     pool,
   };

@@ -65,7 +65,46 @@ describe("app", () => {
       });
     });
 
+    describe("purchase", () => {
+      it("should return 400/validation_error if schema mismatches", async () => {
+        const response = await request(app)
+          .post("/products/00000000-0000-0000-0000-000000000001/purchase")
+          .send({
+            // can't update name through purchase
+            name: "foobar",
+          });
 
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("validation_error");
+        expect(response.body.details).toBeInstanceOf(Array);
+      });
+
+      it("should return 200 if purchase went through ok", async () => {
+        const fetch = await request(app).get(
+          "/products/00000000-0000-0000-0000-000000000001"
+        );
+
+        const purchase = await request(app)
+          .post("/products/00000000-0000-0000-0000-000000000001/purchase")
+          .send({
+            inventory_count: 1,
+          });
+
+        expect(purchase.status).toBe(200);
+        expect(purchase.body.inventory_count).toBe(
+          fetch.body.inventory_count - 1
+        );
+      });
+
+      it("should return 400/out_of_stock if inventory_count would go negative", async () => {
+        const response = await request(app)
+          .post("/products/00000000-0000-0000-0000-000000000001/purchase")
+          .send({
+            inventory_count: Math.pow(2, 31) - 1,
+          });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("out_of_stock");
       });
     });
   });
