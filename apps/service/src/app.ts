@@ -23,8 +23,6 @@ export async function createExpressApp({
   connectionString: string;
   isDevEnv: boolean;
 }) {
-  const app: Express = addRoutes(express());
-
   if (isDevEnv) {
     await createDatabaseIfNotExistsAsync(connectionString);
   }
@@ -47,5 +45,5 @@ export async function createExpressApp({
     }));
   }
 
-  return app;
+  return addRoutes(express());
 }
