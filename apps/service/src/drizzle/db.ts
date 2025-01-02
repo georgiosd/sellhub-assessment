@@ -29,9 +29,7 @@ export async function createDatabaseIfNotExistsAsync(url: string) {
       return;
     }
 
-    console.log(`${databaseName} database not found, creating it.`);
     await client.query(`CREATE DATABASE "${databaseName}";`);
-    console.log(`created database ${databaseName}`);
   } finally {
     await client.end();
   }
@@ -42,7 +40,10 @@ export async function createDrizzleAsync(url: string) {
     connectionString: url,
   });
 
-  return drizzle(pool, {
-    schema,
-  });
+  return {
+    db: drizzle(pool, {
+      schema,
+    }),
+    pool,
+  };
 }

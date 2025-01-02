@@ -27,16 +27,16 @@ export async function createExpressApp({
     await createDatabaseIfNotExistsAsync(connectionString);
   }
 
-  const drizzle = await createDrizzleAsync(connectionString);
+  const { db, pool } = await createDrizzleAsync(connectionString);
 
-  await migrate(drizzle, {
+  await migrate(db, {
     migrationsFolder: "./src/drizzle/migrations",
   });
 
   if (isDevEnv) {
-    await reset(drizzle, schema);
+    await reset(db, schema);
 
-    await seed(drizzle, schema).refine((f) => ({
+    await seed(db, schema).refine((f) => ({
       products: {
         columns: {
           inventory_count: f.int({ minValue: 0 }),
@@ -45,5 +45,9 @@ export async function createExpressApp({
     }));
   }
 
-  return addRoutes(express());
+  return {
+    app: addRoutes(express()),
+    db,
+    pool,
+  };
 }

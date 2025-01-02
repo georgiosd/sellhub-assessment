@@ -4,7 +4,7 @@ import { createExpressApp } from "./app";
 dotenv.config();
 
 async function main() {
-  const app = await createExpressApp({
+  const { app } = await createExpressApp({
     connectionString: process.env.POSTGRES_URL as string,
     isDevEnv: process.env.NODE_ENV === "development",
   });
