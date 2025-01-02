@@ -2,12 +2,15 @@ import express, { Express, Request, Response } from "express";
 
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { reset, seed } from "drizzle-seed";
-function addRoutes(app: Express) {
-  app.get("/", (req: Request, res: Response) => {
-    res.send("Express + TypeScript Server");
 import { createDatabaseIfNotExistsAsync, createDrizzle } from "./drizzle/db";
 import * as schema from "./drizzle/schema";
 
+type TDatabase = ReturnType<typeof createDrizzle>["db"];
+
+function addRoutes(app: Express, db: TDatabase) {
+  app.get("/products", async (req: Request, res: Response) => {
+    const products = await db.select().from(schema.products).limit(10);
+    res.json(products);
   });
 
   return app;
@@ -43,7 +46,7 @@ export async function createExpressApp({
   }
 
   return {
-    app: addRoutes(express()),
+    app: addRoutes(express(), db),
     db,
     pool,
   };

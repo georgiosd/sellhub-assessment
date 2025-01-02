@@ -6,6 +6,7 @@ import { Express } from "express";
 import request from "supertest";
 import { createExpressApp } from "./app";
 import { Pool } from "pg";
+import { TProduct } from "./drizzle/schema";
 
 let app: Express;
 let pool: Pool;
@@ -39,8 +40,14 @@ afterAll(async () => {
 });
 
 describe("app", () => {
-  it("should return 200 on /", async () => {
-    const response = await request(app).get("/");
-    expect(response.status).toBe(200);
+  describe("products", () => {
+    it("should return 10 products", async () => {
+      const response = await request(app).get("/products");
+
+      expect(response.status).toBe(200);
+
+      const result = response.body as TProduct[];
+      expect(result).toHaveLength(10);
+    });
   });
 });
