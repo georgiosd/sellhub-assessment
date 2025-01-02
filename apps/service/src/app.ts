@@ -1,5 +1,5 @@
-import { eq } from "drizzle-orm";
 import cors from "cors";
+import { eq, TransactionRollbackError } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { reset, seed } from "drizzle-seed";
 import express, { Express, NextFunction, Request, Response } from "express";
@@ -90,36 +90,38 @@ function addRoutes(app: Express, db: TDatabase) {
         return;
       }
 
-      const newCount = await db.transaction(async (tx) => {
-        const result = await tx
-          .update(schema.products)
-          .set({
-            inventory_count:
-              match[0].inventory_count - req.body.inventory_count,
-          })
-          .where(eq(products.id, req.params.id))
-          .returning({ inventory_count: products.inventory_count });
+      try {
+        const newCount = await db.transaction(async (tx) => {
+          const result = await tx
+            .update(schema.products)
+            .set({
+              inventory_count:
+                match[0].inventory_count - req.body.inventory_count,
+            })
+            .where(eq(products.id, req.params.id))
+            .returning({ inventory_count: products.inventory_count });
 
-        if (result[0].inventory_count < 0) {
-          try {
-            tx.rollback();
-          } catch {}
-          return -1;
+          if (result[0].inventory_count < 0) {
+            await tx.rollback();
+            return -1;
+          }
+
+          return result[0].inventory_count;
+        });
+
+        res.status(200).json({
+          inventory_count: newCount,
+        });
+      } catch (e) {
+        if (e instanceof TransactionRollbackError) {
+          res.status(400).json({
+            error: "out_of_stock",
+          });
+          return;
         }
 
-        return result[0].inventory_count;
-      });
-
-      if (newCount === -1) {
-        res.status(400).json({
-          error: "out_of_stock",
-        });
-        return;
+        throw e;
       }
-
-      res.status(200).json({
-        inventory_count: newCount,
-      });
     }
   );
 

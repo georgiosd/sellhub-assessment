@@ -106,6 +106,24 @@ describe("app", () => {
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("out_of_stock");
       });
+
+      it("should rollback transaction if inventory_count would go negative", async () => {
+        const fetch = await request(app).get(
+          "/products/00000000-0000-0000-0000-000000000001"
+        );
+
+        const response = await request(app)
+          .post("/products/00000000-0000-0000-0000-000000000001/purchase")
+          .send({
+            inventory_count: Math.pow(2, 31) - 1,
+          });
+
+        const refetch = await request(app).get(
+          "/products/00000000-0000-0000-0000-000000000001"
+        );
+
+        expect(refetch.body.inventory_count).toBe(fetch.body.inventory_count);
+      });
     });
   });
 });
